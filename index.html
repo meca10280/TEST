@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Jugador - GIG </title>
+    <script src="./js/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .question-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+        .question-item {
+            margin-bottom: 20px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 15px;
+        }
+        .question-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: #f4f4f9;
+        }
+        input[type="range"] {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+        }
+        .slider-value {
+            min-width: 20px;
+            font-weight: bold;
+            color: #007bff;
+            padding: 5px 10px;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+        }
+        button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        #results {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ccc;
+            text-align: center;
+        }
+        #radarChart {
+            max-width: 600px;
+            max-height: 600px;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>¿Qué tipo de jugador eres?</h1>
+        <p> ¡Bienvenido! ¿Estás listo para saber qué tipo de jugador eres en entornos gamificados?
+        Esta aplicación te guiará a través de una serie de preguntas sencillas y dinámicas diseñadas para analizar tus preferencias, motivaciones y estilo de interacción dentro de juegos y sistemas gamificados.
+        </p> 
+        <form id="quizForm">
+            <div id="questionsContainer">
+                </div>
+            
+            <button type="submit">Ver los resultados</button>
+        </form>
+
+        <div id="results" style="display:none;">
+            <h2>Resultados</h2>
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // 1. ESTRUCTURA DE DATOS: 30 Preguntas agrupadas en 6 grupos (G1 a G6)
+        const allQuestions = [
+            // Grupo G1 (5 Preguntas): Socializador
+            { id: 1, text: "Para mí es importante interactuar con los demás.", groupID: "Socializador" },
+            { id: 2, text: "Me gusta formar parte de un equipo.", groupID: "Socializador" },
+            { id: 3, text: "Para mí es importante sentir que formo parte de una comunidad.", groupID: "Socializador" },
+            { id: 4, text: "Me divierte más estar con otras personas que solo.", groupID: "Socializador" },
+            { id: 5, text: "Disfruto de las actividades en grupo.", groupID: "Socializador" },
+            
+            // Grupo G2 (5 Preguntas): Filántropo
+            { id: 6, text: "Me hace feliz poder ayudar a los demás.", groupID: "Filántropo" },
+            { id: 7, text: "Me siento bien asumiendo el papel de mentor.", groupID: "Filántropo" },
+            { id: 8, text: "Me gusta ayudar a otros a orientarse en situaciones nuevas.", groupID: "Filántropo" },
+            { id: 9, text: "Me gusta compartir mis conocimientos.", groupID: "Filántropo" },
+            { id: 10, text: "Para mí es importante el bienestar de los demás.", groupID: "Filántropo" },
+
+            // Grupo G3 (5 Preguntas): Espiritu Libre
+            { id: 11, text: "Para mí es importante seguir mi propio camino.", groupID: "Libre" },
+            { id: 12, text: "A menudo me dejo guiar por mi curiosidad.", groupID: "Libre" },
+            { id: 13, text: "Me gusta probar cosas nuevas.", groupID: "Libre" },
+            { id: 14, text: "Prefiero fijarme mis propios objetivos.", groupID: "Libre" },
+            { id: 15, text: "Para mí es importante ser independiente.", groupID: "Libre" },
+
+            // Grupo G4 (5 Preguntas): Disruptor
+            { id: 16, text: "Me gusta provocar.", groupID: "Disruptor" },
+            { id: 17, text: "Me gusta cuestionar el statu quo.", groupID: "Disruptor" },
+            { id: 18, text: "Me considero un rebelde.", groupID: "Disruptor" },
+            { id: 19, text: "No me gusta seguir las reglas.", groupID: "Disruptor" },
+            { id: 20, text: "Me gusta tomar las riendas del cambio.", groupID: "Disruptor" },
+            
+            // Grupo G5 (5 Preguntas): Triunfador
+            { id: 21, text: "Soy muy ambicioso.", groupID: "Triunfador" },
+            { id: 22, text: "Me gusta superar obstáculos.", groupID: "Triunfador" },
+            { id: 23, text: "Para mí es importante llevar siempre a cabo mis tareas por completo.", groupID: "Triunfador" },
+            { id: 24, text: "Me cuesta dejar de lado un problema antes de haber encontrado una solución.", groupID: "Triunfador" },
+            { id: 25, text: "Me gusta dominar tareas difíciles.", groupID: "Triunfador" },
+
+            // Grupo G6 (5 Preguntas): Jugador
+            { id: 26, text: "Me gustan las competiciones en las que se puede ganar un premio.", groupID: "Jugador" },
+            { id: 27, text: "Las recompensas son una forma estupenda de motivarme.", groupID: "Jugador" },
+            { id: 28, text: "Busco mis propios intereses.", groupID: "Jugador" },
+            { id: 29, text: "Para mí es importante el retorno de la inversión.", groupID: "Jugador" },
+            { id: 30, text: "Si la recompensa es suficiente, me esforzaré.", groupID: "Jugador" }
+        ];
+
+        // Función para mezclar un array (Algoritmo de Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 2. RENDERIZACIÓN DE PREGUNTAS
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            // Mezcla las preguntas antes de renderizar
+            const shuffledQuestions = shuffleArray(allQuestions);
+            
+            // Limpiar el contenedor antes de inyectar
+            container.innerHTML = '';
+            
+            shuffledQuestions.forEach(q => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'question-item';
+                itemDiv.setAttribute('data-group-id', q.groupID); // Asignar el ID de grupo al contenedor
+                
+                const label = document.createElement('label');
+                label.htmlFor = `q-${q.id}`;
+                label.textContent = `${q.text}`; //`${q.id}. ${q.text} (Grupo ${q.groupID})`;
+                
+                const sliderContainer = document.createElement('div');
+                sliderContainer.className = 'slider-container';
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.id = `q-${q.id}`;
+                slider.name = `q-${q.id}`;
+                slider.min = '1';
+                slider.max = '7';
+                slider.value = '4'; // Valor inicial neutro (o el que se prefiera);
+                                
+                // Mostrar valor dinámicamente
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'slider-value';
+                valueSpan.textContent = slider.value;
+
+                slider.addEventListener('input', () => {
+                    valueSpan.textContent = slider.value;
+                    /*let optionValue;
+                    switch(slider.value) {
+	                    case '1': optionValue = 'Totalmente en desacuerdo'; break;
+	                    case '2': optionValue = 'En desacuerdo'; break;
+	                    case '3': optionValue = 'Algo en desacuerdo'; break;
+	                    case '4': optionValue = 'Ni de acuerdo ni en desacuerdo (o neutral)'; break;
+	                    case '5': optionValue = 'Algo de acuerdo'; break;
+	                    case '6': optionValue = 'De acuerdo'; break;
+	                    case '7': optionValue = 'Totalmente de acuerdo'; break; 
+                    } valueSpan.textContent = optionValue;*/
+                });
+
+                sliderContainer.appendChild(slider);
+                sliderContainer.appendChild(valueSpan);
+                
+                itemDiv.appendChild(label);
+                itemDiv.appendChild(sliderContainer);
+                container.appendChild(itemDiv);
+            });
+        }
+
+        // 3. LÓGICA DE ENVÍO Y CÁLCULO
+        document.getElementById('quizForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevenir el envío tradicional del formulario
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const groupedScores = { "Socializador": 0, "Filántropo": 0, "Libre": 0, "Disruptor": 0, "Triunfador": 0, "Jugador": 0 };
+            const MAX_SCORE_PER_GROUP = 35; // 5 preguntas * 7 (máximo)
+            const STANDARDIZED_VALUES = {};
+
+            // Paso 1: Recolectar y agrupar las puntuaciones
+            for (let pair of formData.entries()) {
+                const [inputName, scoreString] = pair;
+                const questionID = parseInt(inputName.split('-')[1]);
+                const score = parseInt(scoreString);
+                
+                // Buscar el groupID original de la pregunta
+                const question = allQuestions.find(q => q.id === questionID);
+                
+                if (question) {
+                    groupedScores[question.groupID] += score;
+                }
+            }
+
+            // Paso 2: Calcular el valor estandarizado (suma / 35)
+            const groupIDs = Object.keys(groupedScores);
+            groupIDs.forEach(id => {
+                const standardizedValue = groupedScores[id] / MAX_SCORE_PER_GROUP;
+                STANDARDIZED_VALUES[id] = parseFloat(standardizedValue.toFixed(4));
+            });
+
+            console.log("Puntuaciones Totales por Grupo:", groupedScores);
+            console.log("Valores Estandarizados (0 a 1):", STANDARDIZED_VALUES);
+
+            // Paso 3: Generar el Gráfico de Radar
+            document.getElementById('results').style.display = 'block';
+            drawRadarChart(groupIDs, Object.values(STANDARDIZED_VALUES));
+        });
+
+        // 4. FUNCIÓN DE GRÁFICO (Chart.js)
+        let chartInstance = null; // Variable para almacenar la instancia del gráfico
+
+        function drawRadarChart(labels, data) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            // Si ya existe una instancia de gráfico, destruirla para evitar solapamientos
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels, // IDs de Grupo (G1, G2, etc.)
+                    datasets: [{
+                        label: 'Tendencias del perfil',
+                        data: data, // Valores estandarizados
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        pointBackgroundColor: 'rgba(0, 123, 255, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(0, 123, 255, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 1, // El máximo debe ser 1.0 (el valor estandarizado máximo)
+                            pointLabels: {
+                                font: {
+                                    size: 14
+                                }
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                stepSize: 0.2, // Ticks de 0.2 en 0.2
+                                callback: function(value) {
+                                    return (value * 100).toFixed(0) + '%'; // Muestra el valor como porcentaje
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += (context.parsed.r * 100).toFixed(2) + '%';
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Iniciar: Renderizar las preguntas cuando la página cargue
+        document.addEventListener('DOMContentLoaded', renderQuestions);
+    </script>
+</body>
+</html>
